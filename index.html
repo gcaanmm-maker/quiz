@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Show do Milhão - JS (Áudio consertado)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Inter, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial;}
+  html,body{height:100%}
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: radial-gradient(circle at 10% 10%, #0f2027 0%, #2c5364 40%, #66999b 100%);
+    padding:20px;color:#111;
+  }
+  .container{width:100%;max-width:920px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,250,0.95));border-radius:14px;box-shadow:0 20px 60px rgba(2,6,23,0.55);padding:22px;overflow:hidden;}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  header h1{font-size:20px;color:#0b3b2e}
+  .meta{display:flex;gap:10px;align-items:center}
+  .chip{background:#eef7f2;border-radius:999px;padding:6px 10px;font-size:13px;color:#1b6a4a}
+  .progress-wrap{margin-bottom:12px}
+  .progress-bar{background:#e6eef0;border-radius:999px;height:12px;overflow:hidden;margin-bottom:6px}
+  .progress-fill{height:100%; width:0%; background:linear-gradient(90deg,#ffd54a,#ffa726);transition:width .35s ease}
+  .progress-label{font-size:13px;color:#234;display:flex;justify-content:space-between}
+  .main{display:grid;grid-template-columns:1fr 260px;gap:18px}
+  .question-area{padding:16px;border-radius:10px;min-height:260px;background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.9));box-shadow:0 6px 20px rgba(0,0,0,0.06);transition:transform .28s ease, opacity .22s ease}
+  .question-area.fade{opacity:0; transform:scale(.995)}
+  .question-meta{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+  .q-number{background:#fff4e0;border-radius:8px;padding:6px 10px;font-weight:600;color:#8a4a00;font-size:13px}
+  .q-title{font-size:18px;color:#102;line-height:1.3}
+  .timer{margin-top:10px;font-weight:700;color:#b33d2e;font-size:18px;display:inline-block;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.6)}
+  .answers{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+  .answer-btn{border:0;padding:12px 14px;border-radius:10px;background:#0f9d58;color:white;cursor:pointer;font-weight:600;text-align:left;font-size:15px;box-shadow:0 8px 18px rgba(12,60,36,0.12);transition:transform .12s ease}
+  .answer-btn:hover{transform:translateY(-4px)}
+  .answer-btn.correct{background:#1e88e5}
+  .answer-btn.wrong{background:#e53935}
+  .controls{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap}
+  .btn{background:#ffb300;border-radius:10px;padding:10px 14px;border:0;font-weight:700;color:#fff;cursor:pointer}
+  .btn.secondary{background:#1e88e5}
+  .btn.ghost{background:transparent;border:2px solid rgba(0,0,0,.06);color:#222}
+  .help-box{margin-top:12px;background:#fafafa;padding:10px;border-radius:10px;border-left:4px solid #4caf50;color:#2b4}
+  .sidebar{padding:14px;border-radius:10px;background:linear-gradient(180deg,#ffffff,#fbfbfb);box-shadow:0 6px 20px rgba(0,0,0,0.04);height:100%;display:flex;flex-direction:column;gap:12px}
+  .lifelines{display:flex;flex-direction:column;gap:10px}
+  .life{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,.04)}
+  .stats{margin-top:auto;font-size:14px;color:#244}
+  .q-list{display:flex;gap:6px;flex-wrap:wrap}
+  .q-dot{width:28px;height:28px;border-radius:6px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:12px;color:#444}
+  .q-dot.active{background:linear-gradient(90deg,#ffd54a,#ff7043);color:#fff;font-weight:700}
+  footer{margin-top:14px;font-size:13px;color:#2a3;display:flex;justify-content:space-between;align-items:center}
+  /* Start overlay */
+  .start-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.72);display:flex;align-items:center;justify-content:center;z-index:9999}
+  .start-card{background:#fff;padding:28px;border-radius:12px;text-align:center;max-width:520px;width:90%}
+  .start-card h2{margin-bottom:8px}
+  .start-card p{margin-bottom:14px;color:#444}
+  .start-actions{display:flex;gap:10px;align-items:center;justify-content:center}
+  .start-btn{background:#1e88e5;color:#fff;border:0;padding:12px 18px;border-radius:10px;cursor:pointer;font-weight:700}
+  .mute-toggle{display:flex;gap:8px;align-items:center}
+  @media(max-width:920px){.main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- Start overlay (necessário para desbloquear áudio em muitos navegadores) -->
+<div id="start-overlay" class="start-overlay" aria-hidden="false">
+  <div class="start-card" role="dialog" aria-modal="true">
+    <h2>Show do Milhão — JavaScript</h2>
+    <p>Clique em <strong>Começar jogo</strong> para iniciar. Isso habilita os sons (aplausos, erro e música de fundo) — navegadores exigem um clique do usuário para tocar áudio.</p>
+    <div class="start-actions">
+      <label class="mute-toggle"><input id="start-sound-checkbox" type="checkbox" checked> Ativar som</label>
+      <button id="start-btn" class="start-btn">Começar jogo</button>
+    </div>
+    <p style="margin-top:12px;font-size:12px;color:#666">Dica: se os sons ainda não tocarem, abra o console (F12) e veja mensagens; ou abra o arquivo via servidor HTTP (ex.: <code>python -m http.server</code>).</p>
+  </div>
+</div>
+
+<div class="container" aria-label="Show do Milhão - JavaScript">
+  <header>
+    <h1>Show do Milhão — Quiz JavaScript</h1>
+    <div class="meta">
+      <div class="chip">Banco: 100 perguntas</div>
+      <div class="chip" id="round-chip">Rodada: 10 perguntas</div>
+      <button id="mute-btn" class="chip" title="Ativar/Desativar som">🔊 Som: ON</button>
+    </div>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-label"><span id="progress-text">Pergunta 1 de 10 (Banco #1)</span><span id="progress-percent">0%</span></div>
+  </div>
+
+  <div class="main">
+    <section class="question-area" id="question-area">
+      <div class="question-meta">
+        <div class="q-number" id="q-number">#1</div>
+        <div style="flex:1"><div class="q-title" id="q-title">Carregando pergunta...</div></div>
+        <div style="margin-left:12px;"><div class="timer" id="timer">15</div></div>
+      </div>
+
+      <div class="answers" id="answers" role="list"></div>
+
+      <div class="controls">
+        <button class="btn" id="next-btn" style="display:none">Próxima</button>
+        <button class="btn secondary" id="help-btn">Ajuda do Público</button>
+        <button class="btn ghost" id="skip-btn">Pular Pergunta</button>
+      </div>
+
+      <div id="help-text" class="help-box" style="display:none"></div>
+      <div id="result" style="margin-top:12px;font-weight:700;color:#0b3b2e"></div>
+    </section>
+
+    <aside class="sidebar" aria-hidden="false">
+      <div><strong>Recursos</strong>
+        <div class="lifelines" style="margin-top:10px">
+          <div class="life"><div class="label">Pular</div><div><button id="skip-side">Usar</button></div></div>
+          <div class="life"><div class="label">Ajuda do público</div><div><button id="help-side">Usar</button></div></div>
+        </div>
+      </div>
+
+      <div><strong>Progresso no banco (1–100)</strong>
+        <div class="q-list" id="q-list" style="margin-top:8px;max-height:200px;overflow:auto;padding:6px"></div>
+      </div>
+
+      <div class="stats" id="stats">
+        <div>Perguntas respondidas: <span id="answered-count">0</span>/10</div>
+        <div>Acertos: <span id="correct-count">0</span></div>
+        <div>Erros: <span id="wrong-count">0</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer><div>Desenvolvido: Show do Milhão JS • 100 perguntas</div><div id="final-note"></div></footer>
+</div>
+
+<!-- Áudios (vários sources como fallback) -->
+<audio id="bg-music" loop crossorigin="anonymous">
+  <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="sound-correct" preload="auto" crossorigin="anonymous">
+  <source src="https://actions.google.com/sounds/v1/people/applause.ogg" type="audio/ogg">
+  <source src="https://www.soundjay.com/human/sounds/applause-8.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="sound-wrong" preload="auto" crossorigin="anonymous">
+  <source src="https://actions.google.com/sounds/v1/cartoon/boing.ogg" type="audio/ogg">
+  <source src="https://www.soundjay.com/misc/sounds/fail-buzzer-01.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+/* → banco de 100 perguntas (como antes) */
+const questionBank = [
+  {id:1, question:"Qual operador compara igualdade estrita em JavaScript?", answers:["=","==","===","!=="], correct:"==="},
+  {id:2, question:"Qual é o resultado de typeof [] em JavaScript?", answers:["array","object","list","undefined"], correct:"object"},
+  {id:3, question:"Qual método adiciona um elemento ao final de um array?", answers:["push()","pop()","shift()","unshift()"], correct:"push()"},
+  {id:4, question:"Qual palavra-chave cria uma variável com escopo de bloco?", answers:["var","let","const","def"], correct:"let"},
+  {id:5, question:"Qual função converte uma string em inteiro (base 10)?", answers:["parseInt()","parseFloat()","Number()","toFixed()"], correct:"parseInt()"},
+  {id:6, question:"O que é uma IIFE (Immediately Invoked Function Expression)?", answers:["Função anônima invocada imediatamente","Função que retorna outra função","Função genérica","Função construtora"], correct:"Função anônima invocada imediatamente"},
+  {id:7, question:"Qual é a diferença principal entre null e undefined?", answers:["null = tipo; undefined = valor","null é atribuído; undefined é ausência","Ambos iguais","undefined é string"], correct:"null é atribuído; undefined é ausência"},
+  {id:8, question:"Qual método une dois arrays em um só?", answers:["concat()","join()","merge()","append()"], correct:"concat()"},
+  {id:9, question:"O que é um closure em JavaScript?", answers:["Objeto especial","Função que lembra o escopo onde foi criada","Tipo de loop","Construtor de classe"], correct:"Função que lembra o escopo onde foi criada"},
+  {id:10, question:"Qual comando cria uma promise em JS?", answers:["new Promise()","Promise.create()","Promise.of()","createPromise()"], correct:"new Promise()"},
+  {id:11, question:"Qual método converte JSON string para objeto JS?", answers:["JSON.parse()","JSON.stringify()","toJSON()","parseJSON()"], correct:"JSON.parse()"},
+  {id:12, question:"Qual método converte um objeto JS em JSON string?", answers:["JSON.stringify()","JSON.parse()","toString()","Object.toJSON()"], correct:"JSON.stringify()"},
+  {id:13, question:"Qual operador retorna o valor mais à esquerda truthy?", answers:["&&","||","!","??"], correct:"||"},
+  {id:14, question:"O que faz o operador '&&' em JS?", answers:["OR lógico","AND lógico","Negação","Operador ternário"], correct:"AND lógico"},
+  {id:15, question:"Qual operador é o coalescente nulo (nullish) em JS?", answers:["??","||","&&","!"], correct:"??"},
+  {id:16, question:"Qual a saída de '0 == \"0\"'?", answers:["true","false","TypeError","undefined"], correct:"true"},
+  {id:17, question:"Qual a saída de '0 === \"0\"'?", answers:["true","false","TypeError","undefined"], correct:"false"},
+  {id:18, question:"Como definir uma função arrow que recebe x e retorna x*2?", answers:["function(x){return x*2}","(x)=>x*2","=> x*2","def x => x*2"], correct:"(x)=>x*2"},
+  {id:19, question:"Qual método remove o primeiro elemento de um array?", answers:["shift()","pop()","splice(0,1)","slice(1)"], correct:"shift()"},
+  {id:20, question:"Qual método adiciona elemento ao início do array?", answers:["push()","unshift()","append()","prepend()"], correct:"unshift()"},
+  {id:21, question:"Qual método retorna uma cópia rasa (shallow) de parte do array?", answers:["slice()","splice()","concat()","copy()"], correct:"slice()"},
+  {id:22, question:"Qual método altera o array removendo/adição de elementos no lugar?", answers:["splice()","slice()","map()","filter()"], correct:"splice()"},
+  {id:23, question:"Qual método cria um novo array com os resultados do callback?", answers:["map()","forEach()","filter()","reduce()"], correct:"map()"},
+  {id:24, question:"Qual método filtra elementos de um array por condição?", answers:["map()","filter()","forEach()","reduce()"], correct:"filter()"},
+  {id:25, question:"Qual método reduz um array a um único valor?", answers:["reduce()","map()","filter()","every()"], correct:"reduce()"},
+  {id:26, question:"Qual método testa se todos os elementos passam em um teste?", answers:["every()","some()","includes()","find()"], correct:"every()"},
+  {id:27, question:"Qual método testa se algum elemento passa no teste?", answers:["some()","every()","findIndex()","indexOf()"], correct:"some()"},
+  {id:28, question:"Como checar se array inclui um valor?", answers:["includes()","indexOf()","find()","contains()"], correct:"includes()"},
+  {id:29, question:"Qual método retorna o índice do primeiro elemento correspondente?", answers:["indexOf()","find()","findIndex()","includes()"], correct:"indexOf()"},
+  {id:30, question:"Como obter chaves de um objeto em array?", answers:["Object.keys(obj)","Object.values(obj)","obj.keys()","obj.entries()"], correct:"Object.keys(obj)"},
+  {id:31, question:"Como obter valores de um objeto em array?", answers:["Object.values(obj)","Object.keys(obj)","obj.values()","Object.entries(obj)"], correct:"Object.values(obj)"},
+  {id:32, question:"Como obter pares [chave,valor] de um objeto?", answers:["Object.entries(obj)","Object.pairs(obj)","obj.entries()","Object.map(obj)"], correct:"Object.entries(obj)"},
+  {id:33, question:"Qual a saída de 'typeof NaN'?", answers:["number","NaN","object","undefined"], correct:"number"},
+  {id:34, question:"Qual método transforma cada caractere de string em array de substrings?", answers:["split()","slice()","substr()","substring()"], correct:"split()"},
+  {id:35, question:"Qual método junta elementos de array em string?", answers:["join()","concat()","combine()","toString()"], correct:"join()"},
+  {id:36, question:"Qual método retorna true se string começar com um padrão?", answers:["startsWith()","indexOf()","includes()","match()"], correct:"startsWith()"},
+  {id:37, question:"Qual método retorna true se string terminar com um padrão?", answers:["endsWith()","slice()","substr()","match()"], correct:"endsWith()"},
+  {id:38, question:"Qual método converte string para maiúsculas?", answers:["toUpperCase()","upper()","uppercase()","toUpper()"], correct:"toUpperCase()"},
+  {id:39, question:"Qual método converte string para minúsculas?", answers:["toLowerCase()","lower()","toLower()","lowerCase()"], correct:"toLowerCase()"},
+  {id:40, question:"Qual propriedade retorna o comprimento de uma string?", answers:["length","size","len","count"], correct:"length"},
+  {id:41, question:"Como criar uma classe em ES6 chamada Person?", answers:["class Person {}","function Person() {}","Person = {}","create class Person {}"], correct:"class Person {}"},
+  {id:42, question:"Como estender uma classe em ES6?", answers:["class Child extends Parent {}","class Child inherit Parent {}","class Child < Parent {}","extends Child Parent {}"], correct:"class Child extends Parent {}"},
+  {id:43, question:"Qual palavra-chave chama o construtor pai em subclass?", answers:["super()","parent()","this()","base()"], correct:"super()"},
+  {id:44, question:"Qual método do objeto Date retorna milissegundos desde 1970?", answers:["Date.now()","new Date()","Date.getTime()","getMilliseconds()"], correct:"Date.now()"},
+  {id:45, question:"Qual método converte número em string?", answers:["toString()","Stringify()","toStr()","toLocaleString()"], correct:"toString()"},
+  {id:46, question:"Qual função global converte para número (int/float) do JS moderno?", answers:["Number()","parseInt()","parseFloat()","toNumber()"], correct:"Number()"},
+  {id:47, question:"Qual comando paralisa execução em async function? (não recomendado)", answers:["await","yield","then","suspend"], correct:"await"},
+  {id:48, question:"Qual método registra um callback ao completar promise?", answers:["then()","catch()","finally()","subscribe()"], correct:"then()"},
+  {id:49, question:"Qual método captura erro de promise?", answers:["catch()","then()","fail()","error()"], correct:"catch()"},
+  {id:50, question:"Qual método executa sempre após promise resolvida ou rejeitada?", answers:["finally()","then()","catch()","always()"], correct:"finally()"},
+  {id:51, question:"Como criar um módulo exportando função 'foo' (ES6)?", answers:["export function foo() {}","module.exports = foo","exports.foo = foo","export default foo"], correct:"export function foo() {}"},
+  {id:52, question:"Como importar padrão default de 'mod' (ES6)?", answers:["import foo from 'mod'","require('mod')","const foo = mod","include 'mod'"], correct:"import foo from 'mod'"},
+  {id:53, question:"Qual método do DOM retorna elemento por id?", answers:["getElementById()","querySelectorAll()","getElementsByClassName()","queryById()"], correct:"getElementById()"},
+  {id:54, question:"Qual método retorna o primeiro elemento que combina seletor CSS?", answers:["querySelector()","getElementById()","getElementsByTagName()","queryAll()"], correct:"querySelector()"},
+  {id:55, question:"Qual método retorna todos elementos que combinam seletor CSS?", answers:["querySelectorAll()","getElementsByClassName()","querySelector()","getElementsByTagName()"], correct:"querySelectorAll()"},
+  {id:56, question:"Como adicionar classe CSS a elemento (classList)?", answers:["el.classList.add('nome')","el.addClass('nome')","el.class = 'nome'","el.setClass('nome')"], correct:"el.classList.add('nome')"},
+  {id:57, question:"Como remover classe CSS (classList)?", answers:["el.classList.remove('nome')","el.removeClass('nome')","el.class = ''","el.deleteClass('nome')"], correct:"el.classList.remove('nome')"},
+  {id:58, question:"Como alternar classe CSS com classList?", answers:["el.classList.toggle('nome')","el.toggleClass('nome')","el.switchClass('nome')","el.classToggle('nome')"], correct:"el.classList.toggle('nome')"},
+  {id:59, question:"Qual evento dispara ao clicar em um elemento?", answers:["click","change","submit","hover"], correct:"click"},
+  {id:60, question:"Qual evento dispara quando formulário é enviado?", answers:["submit","click","change","input"], correct:"submit"},
+  {id:61, question:"Qual método previne comportamento padrão de evento?", answers:["event.preventDefault()","event.stopPropagation()","return false","event.block()"], correct:"event.preventDefault()"},
+  {id:62, question:"Qual método impede propagação do evento?", answers:["event.stopPropagation()","event.preventDefault()","event.stopImmediate()","event.block()"], correct:"event.stopPropagation()"},
+  {id:63, question:"Qual função transforma NodeList em Array?", answers:["Array.from(nodeList)","nodeList.toArray()","[...nodeList]","both A and C"], correct:"both A and C"},
+  {id:64, question:"O que faz JSON.stringify com objetos circulares sem tratamento?", answers:["Lança erro","Converte normalmente","Remove funções","Retorna null"], correct:"Lança erro"},
+  {id:65, question:"Qual método localStorage salva dado (string)?", answers:["localStorage.setItem('k','v')","localStorage.save('k','v')","localStorage.k='v'","storage.set('k','v')"], correct:"localStorage.setItem('k','v')"},
+  {id:66, question:"Como ler item salvo em localStorage?", answers:["localStorage.getItem('k')","localStorage.k","localStorage.fetch('k')","storage.get('k')"], correct:"localStorage.getItem('k')"},
+  {id:67, question:"Qual é o escopo de 'var'?", answers:["Global ou função","Bloco","Módulo","Local ao loop"], correct:"Global ou função"},
+  {id:68, question:"Qual a vantagem de 'const'?", answers:["Imutabilidade de referência","Totalmente imutável","Escopo global","Permite redeclaração"], correct:"Imutabilidade de referência"},
+  {id:69, question:"Qual keyword permite redeclarar variável no mesmo escopo?", answers:["var","let","const","redeclare"], correct:"var"},
+  {id:70, question:"Qual método converte string em número de ponto flutuante?", answers:["parseFloat()","parseInt()","Number()","toFixed()"], correct:"parseFloat()"},
+  {id:71, question:"Qual função checa se valor não é número (NaN)?", answers:["isNaN()","Number.isNaN()","both A and B","isNumber()"], correct:"both A and B"},
+  {id:72, question:"Qual método retorna substring entre índices (não modifica original)?", answers:["substring()","substr()","slice()","both A and C"], correct:"both A and C"},
+  {id:73, question:"Qual método substitui parte de string por outra?", answers:["replace()","splice()","switch()","map()"], correct:"replace()"},
+  {id:74, question:"Como criar um Set (conjunto) em JS?", answers:["new Set([1,2])","Set.create([1,2])","[] as Set","{1,2}"], correct:"new Set([1,2])"},
+  {id:75, question:"Como criar um Map (chave-valor) em JS?", answers:["new Map([[k,v]])","{k:v}","Map()","mapOf()"], correct:"new Map([[k,v]])"},
+  {id:76, question:"Qual método retorna entries de Map?", answers:["map.entries()","map.items()","map.keys()","map.values()"], correct:"map.entries()"},
+  {id:77, question:"Qual sintaxe cria template string com interpolação?", answers:["`Olá ${nome}`","'Olá ${nome}'","\"Olá ${nome}\"","Template('Olá', nome)"], correct:"`Olá ${nome}`"},
+  {id:78, question:"Qual palavra permite declarar função geradora?", answers:["function*","generator function","gen function","yield function"], correct:"function*"},
+  {id:79, question:"Como pausar e retornar valor em generator?", answers:["yield value","pause value","return value","await value"], correct:"yield value"},
+  {id:80, question:"Qual método verifica se array é array?", answers:["Array.isArray(x)","x instanceof Array","typeof x === 'array'","both A and B"], correct:"both A and B"},
+  {id:81, question:"Qual método cria promessa resolvida com valor?", answers:["Promise.resolve(42)","new Promise.resolve(42)","Promise.of(42)","Promise.create(42)"], correct:"Promise.resolve(42)"},
+  {id:82, question:"Qual método executa múltiplas promessas e retorna quando todas resolvem?", answers:["Promise.all([...])","Promise.race([...])","Promise.any([...])","Promise.allSettled([...])"], correct:"Promise.all([...])"},
+  {id:83, question:"Qual método retorna a primeira promessa resolvida (ou rejeitada)?", answers:["Promise.race([...])","Promise.all([...])","Promise.any([...])","Promise.resolve()"], correct:"Promise.race([...])"},
+  {id:84, question:"Qual método retorna a primeira promessa que resolve com sucesso entre várias?", answers:["Promise.any([...])","Promise.race([...])","Promise.all([..])","Promise.first([...])"], correct:"Promise.any([...])"},
+  {id:85, question:"Qual método retorna resultados de todas promessas (resolvidas ou rejeitadas)?", answers:["Promise.allSettled([...])","Promise.all([...])","Promise.race([...])","Promise.any([...])"], correct:"Promise.allSettled([...])"},
+  {id:86, question:"Qual palavra em JSON é inválida (não existe em JSON)?", answers:["undefined","null","true","false"], correct:"undefined"},
+  {id:87, question:"Qual método do Array cria novo array contendo elementos que passam no callback?", answers:["filter()","map()","reduce()","forEach()"], correct:"filter()"},
+  {id:88, question:"Qual método executa função para cada item mas não retorna novo array?", answers:["forEach()","map()","filter()","reduce()"], correct:"forEach()"},
+  {id:89, question:"Como clonar um objeto shallow com spread operator?", answers:["{...obj}","Object.clone(obj)","obj.copy()","Object.assign([],obj)"], correct:"{...obj}"},
+  {id:90, question:"Como mesclar dois objetos (retornando novo)?", answers:["{...a, ...b}","Object.merge(a,b)","a + b","Object.concat(a,b)"], correct:"{...a, ...b}"},
+  {id:91, question:"Qual forma evita mutação usando Object.assign?", answers:["Object.assign({}, a, b)","Object.assign(a, b)","a.assign(b)","assign({}, a)"], correct:"Object.assign({}, a, b)"},
+  {id:92, question:"Qual método verifica se string contém substring?", answers:["includes()","indexOf()","search()","both A and B"], correct:"both A and B"},
+  {id:93, question:"Qual operador ternário sintaxe básica?", answers:["cond ? a : b","if (cond) a else b","cond then a else b","cond ? (a) : (b) : c"], correct:"cond ? a : b"},
+  {id:94, question:"Qual keyword evita redeclaração de variável no mesmo escopo de bloco?", answers:["let/const","var","redeclare","static"], correct:"let/const"},
+  {id:95, question:"O que faz Function.prototype.bind()?", answers:["Cria nova função com 'this' fixado","Invoca função imediatamente","Remove 'this'","Troca escopo"], correct:"Cria nova função com 'this' fixado"},
+  {id:96, question:"Qual método busca primeiro elemento que satisfaz condição e retorna valor?", answers:["find()","filter()","findIndex()","some()"], correct:"find()"},
+  {id:97, question:"Qual método retorna índice do primeiro elemento que satisfaz condição?", answers:["findIndex()","indexOf()","find()","search()"], correct:"findIndex()"},
+  {id:98, question:"Como remover duplicatas de um array (forma simples)?", answers:["[...new Set(arr)]","arr.unique()","arr.removeDuplicates()","Array.dedup(arr)"], correct:"[...new Set(arr)]"},
+  {id:99, question:"Qual método retorna uma string local-aware (formatar número)?", answers:["toLocaleString()","toString()","format()","localize()"], correct:"toLocaleString()"},
+  {id:100, question:"Qual é o operador typeof para função em JS?", answers:["function","object","callable","method"], correct:"function"}
+];
+
+// Config
+const TOTAL_IN_ROUND = 10;
+const TIMER_DURATION = 15;
+
+// Estado
+let quizData = [], currentIndex = 0, answeredCount = 0, correctCount = 0, wrongCount = 0;
+let usedSkip = false, usedHelp = false, timerInterval = null, timeLeft = TIMER_DURATION;
+let soundEnabled = true;
+
+// DOM
+const qNumberEl = document.getElementById('q-number'), qTitleEl = document.getElementById('q-title');
+const answersEl = document.getElementById('answers'), timerEl = document.getElementById('timer');
+const nextBtn = document.getElementById('next-btn'), helpBtn = document.getElementById('help-btn'), skipBtn = document.getElementById('skip-btn');
+const helpText = document.getElementById('help-text'), progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text'), progressPercent = document.getElementById('progress-percent');
+const qListEl = document.getElementById('q-list'), answeredCountEl = document.getElementById('answered-count');
+const correctCountEl = document.getElementById('correct-count'), wrongCountEl = document.getElementById('wrong-count');
+const soundCorrect = document.getElementById('sound-correct'), soundWrong = document.getElementById('sound-wrong');
+const bgMusic = document.getElementById('bg-music'), questionArea = document.getElementById('question-area');
+const finalNote = document.getElementById('final-note'), muteBtn = document.getElementById('mute-btn');
+const startOverlay = document.getElementById('start-overlay'), startBtn = document.getElementById('start-btn'), startCheckbox = document.getElementById('start-sound-checkbox');
+
+// Start overlay click: desbloqueia áudio e inicia jogo
+startBtn.addEventListener('click', async () => {
+  soundEnabled = !!startCheckbox.checked;
+  // hide overlay
+  startOverlay.style.display = 'none';
+  updateMuteUI();
+  // Preload / unlock audio by attempting play() then pause() on each audio (this is allowed because this click is a user gesture)
+  try {
+    if(soundEnabled){
+      // prime bgMusic
+      await tryPlayThenPause(bgMusic, 0.001);
+      // prime effects
+      await tryPlayThenPause(soundCorrect, 0.001);
+      await tryPlayThenPause(soundWrong, 0.001);
+      // now play background loop at desired volume
+      bgMusic.volume = 0.28;
+      bgMusic.play().catch(err => console.warn('bgMusic play failed after start click:', err));
+    }
+  } catch(err){
+    console.warn('Erro ao "primer" dos sons:', err);
+  }
+  init(); // inicia o jogo
+});
+
+// função utilitária que tenta play/pause para desbloquear áudio (retorna Promise)
+function tryPlayThenPause(audioEl, vol = 0.001){
+  return new Promise((resolve)=>{
+    audioEl.volume = vol;
+    const p = audioEl.play();
+    if(p && typeof p.then === 'function'){
+      p.then(()=>{ audioEl.pause(); audioEl.currentTime = 0; resolve(); }).catch(e=>{ console.warn('play/pause falhou:', e); resolve(); });
+    } else { resolve(); }
+  });
+}
+
+// Gatilho mute UI
+muteBtn.addEventListener('click', ()=>{ soundEnabled = !soundEnabled; updateMuteUI(); if(!soundEnabled){ try{bgMusic.pause()}catch{} } else { bgMusic.play().catch(()=>{});} });
+
+// Atualiza UI do mute
+function updateMuteUI(){ muteBtn.textContent = soundEnabled ? '🔊 Som: ON' : '🔇 Som: OFF'; }
+
+// Inicialização (não toca som - som só após startOverlay click)
+function init(){
+  const copy = [...questionBank];
+  shuffleArray(copy);
+  quizData = copy.slice(0, TOTAL_IN_ROUND);
+  renderBankList();
+  currentIndex = 0; answeredCount = 0; correctCount = 0; wrongCount = 0; usedHelp = false; usedSkip = false;
+  updateStats(); updateProgress(); loadQuestion();
+}
+
+// Embaralhador
+function shuffleArray(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
+
+// Render bank list
+function renderBankList(){ qListEl.innerHTML = ''; for(let i=1;i<=100;i++){ const d=document.createElement('div'); d.className='q-dot'; d.textContent=i; qListEl.appendChild(d);} }
+
+// Atualiza stats
+function updateStats(){ answeredCountEl.textContent = answeredCount; correctCountEl.textContent = correctCount; wrongCountEl.textContent = wrongCount; }
+
+// Atualiza progress (agora avança conforme respondedCount)
+function updateProgress(){ const percent = Math.round((answeredCount / TOTAL_IN_ROUND) * 100); progressFill.style.width = percent + '%'; progressText.textContent = `Pergunta ${Math.min(currentIndex+1, TOTAL_IN_ROUND)} de ${TOTAL_IN_ROUND} (Banco #${quizData[currentIndex]?.id ?? '-'})`; progressPercent.textContent = percent + '%'; const dots = qListEl.querySelectorAll('.q-dot'); dots.forEach(d=>d.classList.remove('active')); const bankId = quizData[currentIndex]?.id; if(bankId){ const dot = qListEl.children[bankId-1]; if(dot) dot.classList.add('active'); } }
+
+// Carrega pergunta
+function loadQuestion(){
+  helpText.style.display = 'none'; nextBtn.style.display = 'none'; document.getElementById('result').textContent = '';
+  questionArea.classList.add('fade'); setTimeout(()=>questionArea.classList.remove('fade'), 250);
+  const q = quizData[currentIndex];
+  qNumberEl.textContent = `#${q.id}`; qTitleEl.textContent = q.question; answersEl.innerHTML = '';
+  const shuffled = shuffleArray([...q.answers]);
+  shuffled.forEach(a=>{ const btn=document.createElement('button'); btn.className='answer-btn'; btn.textContent=a; btn.onclick = ()=>selectAnswer(btn); answersEl.appendChild(btn); });
+  updateProgress(); resetTimer(); startTimer();
+}
+
+// Timer
+function startTimer(){ clearInterval(timerInterval); timeLeft = TIMER_DURATION; timerEl.textContent = timeLeft; timerInterval = setInterval(()=>{ timeLeft--; timerEl.textContent = timeLeft; if(timeLeft <= 0){ clearInterval(timerInterval); handleTimeout(); } },1000); }
+function resetTimer(){ clearInterval(timerInterval); timerEl.textContent = TIMER_DURATION; timeLeft = TIMER_DURATION; }
+
+// Timeout
+function handleTimeout(){ disableAnswers(); showCorrect(); answeredCount++; wrongCount++; updateStats(); updateProgress(); nextBtn.style.display='inline-block'; document.getElementById('result').textContent = 'Tempo esgotado!'; playSound(soundWrong); }
+
+// Seleciona resposta
+function selectAnswer(btn){
+  if(btn.disabled) return;
+  clearInterval(timerInterval);
+  const currentQ = quizData[currentIndex];
+  const correct = currentQ.correct;
+  if(btn.textContent === correct){ btn.classList.add('correct'); correctCount++; playSound(soundCorrect); document.getElementById('result').textContent = 'Acertou! ✔'; }
+  else { btn.classList.add('wrong'); wrongCount++; playSound(soundWrong); showCorrect(); document.getElementById('result').textContent = 'Errado ✖'; }
+  disableAnswers(); answeredCount++; updateStats(); updateProgress(); nextBtn.style.display = 'inline-block';
+}
+function disableAnswers(){ const btns = answersEl.querySelectorAll('button'); btns.forEach(b=>b.disabled=true); }
+function showCorrect(){ const currentQ = quizData[currentIndex]; const btns = answersEl.querySelectorAll('button'); btns.forEach(b=>{ if(b.textContent === currentQ.correct) b.classList.add('correct'); }); }
+
+// Próxima
+nextBtn.addEventListener('click', ()=>{ currentIndex++; if(currentIndex < quizData.length) loadQuestion(); else finishRound(); });
+
+// Ajuda do público
+helpBtn.addEventListener('click', ()=>{ if(usedHelp){ helpText.style.display='block'; helpText.innerHTML='Ajuda já usada nesta rodada.'; return; } usedHelp = true; const currentQ = quizData[currentIndex]; const answers = [...currentQ.answers]; const percentages = generatePublicPercentages(currentQ.correct, answers); let html = '<strong>Ajuda do público</strong><br/>'; answers.forEach(a=> html += `${a}: ${percentages[a]}%<br/>`); helpText.style.display='block'; helpText.innerHTML = html; });
+
+// Gera porcentagens
+function generatePublicPercentages(correct, answers){
+  const distribution = {}; let base = 35; let remaining = 100 - base; const others = answers.filter(a=>a!==correct); const randoms = others.map(()=>Math.random()); const sum = randoms.reduce((s,v)=>s+v,0); others.forEach((a,i)=>{ distribution[a] = Math.max(5, Math.round((randoms[i]/sum) * remaining)); }); distribution[correct] = base; let total = Object.values(distribution).reduce((s,v)=>s+v,0); while(total < 100){ distribution[correct]++; total++; } while(total > 100){ const othersSorted = others.slice().sort((x,y)=>distribution[y]-distribution[x]); if(othersSorted.length && distribution[othersSorted[0]]>5){ distribution[othersSorted[0]]--; total--; } else { distribution[correct]--; total--; } } return distribution;
+}
+
+// Pular
+skipBtn.addEventListener('click', ()=>{ if(usedSkip){ helpText.style.display='block'; helpText.innerHTML='Pular já foi usado nesta rodada.'; return; } usedSkip = true; clearInterval(timerInterval); answeredCount++; updateStats(); updateProgress(); currentIndex++; if(currentIndex < quizData.length) loadQuestion(); else finishRound(); });
+document.getElementById('help-side').addEventListener('click', ()=> helpBtn.click());
+document.getElementById('skip-side').addEventListener('click', ()=> skipBtn.click());
+
+// Finalizar
+function finishRound(){ clearInterval(timerInterval); answersEl.style.display = 'none'; nextBtn.style.display = 'none'; helpBtn.style.display = 'none'; skipBtn.style.display = 'none'; helpText.style.display = 'none'; qTitleEl.textContent = 'Rodada concluída!'; qNumberEl.textContent = ''; document.getElementById('result').textContent = `Você acertou ${correctCount} de ${TOTAL_IN_ROUND} perguntas.`; const percent = Math.round((correctCount / TOTAL_IN_ROUND) * 100); finalNote.textContent = `Desempenho: ${percent}%`; progressFill.style.width = '100%'; progressText.textContent = `Conclusão da rodada`; progressPercent.textContent = '100%'; if(soundEnabled){ try{ bgMusic.pause(); }catch(e){} } }
+
+// Som (reproduz se habilitado)
+function playSound(audioEl){ if(!soundEnabled) return; try{ audioEl.currentTime = 0; audioEl.volume = 0.95; const p = audioEl.play(); if(p && p.catch) p.catch(err=>console.warn('play falhou:', err)); }catch(e){ console.warn('playSound error', e); } }
+
+// Utilitário: tentar tocar bgMusic (não usado no init — tocado após start click)
+function tryPlayBG(){ if(!soundEnabled) return; bgMusic.volume = 0.28; bgMusic.play().catch(e=>console.warn('bgMusic play blocked:', e)); }
+
+// Mute UI (botão superior)
+muteBtn.addEventListener('click', ()=>{ soundEnabled = !soundEnabled; updateMuteUI(); if(soundEnabled) { tryPlayBG(); } else { try{ bgMusic.pause(); }catch(e){} } });
+function updateMuteUI(){ muteBtn.textContent = soundEnabled ? '🔊 Som: ON' : '🔇 Som: OFF'; }
+
+// Inicialização (não inicia áudio automaticamente!)
+init = function(){
+  const copy = [...questionBank];
+  shuffleArray(copy);
+  quizData = copy.slice(0, TOTAL_IN_ROUND);
+  renderBankList();
+  currentIndex = 0; answeredCount = 0; correctCount = 0; wrongCount = 0; usedHelp = false; usedSkip = false;
+  updateStats(); updateProgress(); loadQuestion();
+};
+
+// Atalho teclado
+document.addEventListener('keydown', (e)=>{ if(e.key >= '1' && e.key <= '4'){ const idx = Number(e.key) - 1; const btn = answersEl.querySelectorAll('button')[idx]; if(btn && !btn.disabled) btn.click(); } else if(e.key === 'Enter'){ const btn = nextBtn; if(btn && btn.style.display !== 'none') btn.click(); } else if(e.key === 'm' || e.key === 'M'){ muteBtn.click(); } });
+
+// Observações para debug: mostra no console quando algo falha
+window.addEventListener('error', (ev)=>{ console.warn('Erro na página:', ev.error || ev.message); });
+
+// pronto
+</script>
+</body>
+</html>
