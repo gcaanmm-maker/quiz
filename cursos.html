@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursos Disponíveis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: radial-gradient(circle at center, #5e5e5e 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            color: white;
+            margin: 0;
+        }
+        .header-bar { background-color: rgba(85, 85, 85, 0.8); padding: 15px; text-align: center; border-bottom: 3px solid #3498db; margin-bottom: 30px;}
+        .card { border-radius: 15px; text-align: center; padding: 20px; border: none; height: 100%; background-color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .card img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; }
+        .course-title { font-weight: bold; color: black; font-size: 1rem; margin-bottom: 5px; }
+        .course-info { font-size: 0.8rem; color: #666; }
+        .arrow-btn { font-size: 24px; color: black; cursor: pointer; transition: transform 0.2s; }
+        .arrow-btn:hover { transform: translateX(5px); color: #3498db; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand bg-dark border-bottom border-primary mb-0 p-3 shadow">
+        <div class="container-fluid">
+            <span class="navbar-brand text-white fw-bold">Portal do Aluno</span>
+            <div class="d-flex">
+                <a href="menu_quiz.html" class="btn btn-outline-light btn-sm me-2">Quiz</a>
+                <a href="biblioteca.html" class="btn btn-outline-light btn-sm me-2">Biblioteca</a>
+                <a href="configuracoes.html" class="btn btn-secondary btn-sm"><i class="fas fa-cog"></i></a>
+                <a href="login.html" class="btn btn-danger btn-sm ms-2"><i class="fas fa-sign-out-alt"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="header-bar mt-0">
+        <h3>Cursos Disponíveis</h3>
+    </div>
+
+    <div class="container pb-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://via.placeholder.com/150/3498db/FFFFFF?text=Computação" alt="Computação">
+                    <div class="course-title">Curso Ciências da Computação.</div>
+                    <div class="course-info">Valor: R$ 700,00<br>Duração: 2 anos.</div>
+                    <a href="conteudo.html" class="mt-2"><i class="fas fa-arrow-right arrow-btn"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://via.placeholder.com/150/ecf0f1/000000?text=Enfermagem" alt="Enfermagem">
+                    <div class="course-title">Curso Enfermagem.</div>
+                    <div class="course-info">Valor: R$ 750,00<br>Duração: 2 anos.</div>
+                    <a href="conteudo.html" class="mt-2"><i class="fas fa-arrow-right arrow-btn"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://via.placeholder.com/150/f1c40f/000000?text=Engenharia" alt="Engenharia">
+                    <div class="course-title">Curso Engenharia.</div>
+                    <div class="course-info">Valor: R$ 750,00<br>Duração: 4 anos.</div>
+                    <a href="conteudo.html" class="mt-2"><i class="fas fa-arrow-right arrow-btn"></i></a>
+                </div>
+            </div>
+             <div class="col-md-4">
+                <div class="card">
+                    <img src="https://via.placeholder.com/150/2980b9/FFFFFF?text=IA" alt="IA">
+                    <div class="course-title">Curso de Inteligencia Virtual.</div>
+                    <div class="course-info">Valor: R$ 700,00<br>Duração: 2 anos.</div>
+                    <a href="conteudo.html" class="mt-2"><i class="fas fa-arrow-right arrow-btn"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
