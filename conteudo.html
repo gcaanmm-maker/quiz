@@ -1,10 +1,23 @@
-<iframe 
-    width="100%" 
-    height="100%" 
-    src="https://youtu.be/tV2w7Rf2GyI?si=QqbkSd2H6fBR65rU" 
-    title="YouTube video player" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    referrerpolicy="strict-origin-when-cross-origin" 
-    allowfullscreen>
-</iframe>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Conteúdos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #333; color: white; margin: 0; padding: 0; }
+        .header-title { background-color: #555; text-align: center; padding: 10px; border-bottom: 2px solid #3498db; }
+        .video-container { width: 100%; height: 85vh; background-color: black; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div class="header-title position-relative">
+        <a href="cursos.html" class="btn btn-sm btn-outline-light position-absolute start-0 ms-2 top-50 translate-middle-y">Voltar</a>
+        <h4>Conteúdos</h4>
+    </div>
+    <div class="video-container">
+        <iframe src="https://youtu.be/tV2w7Rf2GyI?si=QqbkSd2H6fBR65rU" title="Video Player"></iframe>
+    </div>
+</body>
+</html>
