@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor de Livros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        body {
+            background: radial-gradient(circle at center, #5e5e5e 0%, #1a1a1a 100%);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            overflow: hidden; /* Impede rolagem da página inteira */
+        }
+
+        /* Barra de Topo */
+        .reader-nav {
+            background-color: rgba(44, 62, 80, 0.9);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* Área central do livro */
+        .book-stage {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto; /* Permite rolar se o zoom for muito grande */
+            padding: 20px;
+            position: relative;
+        }
+
+        /* A "Página" de papel */
+        #the-canvas {
+            border: 1px solid #000;
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+            background-color: white;
+            transition: opacity 0.3s; /* Efeito suave ao trocar página */
+        }
+
+        /* Controles flutuantes na parte inferior */
+        .controls-bottom {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #555;
+        }
+
+        .page-info {
+            margin: 0 15px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+
+        /* Botões redondos */
+        .btn-circle {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            line-height: 40px;
+            text-align: center;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="reader-nav">
+        <a href="biblioteca.html" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar à Biblioteca
+        </a>
+        <span class="d-none d-md-block">A Origem das Espécies - Visualização</span>
+        <div>
+            <button class="btn btn-secondary btn-sm me-1" id="zoom-out"><i class="fas fa-search-minus"></i></button>
+            <button class="btn btn-secondary btn-sm" id="zoom-in"><i class="fas fa-search-plus"></i></button>
+        </div>
+    </div>
+
+    <div class="book-stage">
+        <canvas id="the-canvas"></canvas>
+    </div>
+
+    <div class="controls-bottom">
+        <button class="btn btn-primary btn-circle" id="prev">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <span class="page-info">
+            Pág: <span id="page_num">--</span> / <span id="page_count">--</span>
+        </span>
+        
+        <button class="btn btn-primary btn-circle" id="next">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <script>
+        // URL do PDF (Tente usar um arquivo local se este link bloquear por CORS)
+        // OBS: Alguns links externos bloqueiam acesso via script. O ideal é baixar o PDF e colocar na pasta.
+        // Vou deixar configurado para procurar um arquivo local chamado 'darwin.pdf' para evitar erros,
+        // mas você pode tentar colar o link da internet aqui.
+        
+        const url = 'https://domainpublic.wordpress.com/wp-content/uploads/2022/01/darwin.pdf'; 
+        // DICA: Se der tela branca, baixe o PDF, salve como 'livro.pdf' na pasta e mude a linha acima para: const url = 'livro.pdf';
+
+        // Configuração inicial do PDF.js
+        let pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,
+            scale = 1.2, // Tamanho inicial do Zoom
+            canvas = document.getElementById('the-canvas'),
+            ctx = canvas.getContext('2d');
+
+        // Define o Worker (necessário para processar o PDF)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        /**
+         * Renderiza a página no canvas
+         */
+        function renderPage(num) {
+            pageRendering = true;
+            
+            // Efeito visual de "carregando" (transparência)
+            canvas.style.opacity = '0.5';
+
+            // Pega a página
+            pdfDoc.getPage(num).then(function(page) {
+                var viewport = page.getViewport({scale: scale});
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Renderiza
+                var renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                var renderTask = page.render(renderContext);
+
+                // Espera terminar de desenhar
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+                    canvas.style.opacity = '1'; // Volta a opacidade normal
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            // Atualiza os números no rodapé
+            document.getElementById('page_num').textContent = num;
+        }
+
+        /**
+         * Fila de renderização (se clicar muito rápido)
+         */
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        /**
+         * Vai para página anterior
+         */
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('prev').addEventListener('click', onPrevPage);
+
+        /**
+         * Vai para próxima página
+         */
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+        document.getElementById('next').addEventListener('click', onNextPage);
+
+        /**
+         * Zoom In
+         */
+        document.getElementById('zoom-in').addEventListener('click', function() {
+            scale += 0.2;
+            renderPage(pageNum);
+        });
+
+        /**
+         * Zoom Out
+         */
+        document.getElementById('zoom-out').addEventListener('click', function() {
+            if(scale > 0.6) {
+                scale -= 0.2;
+                renderPage(pageNum);
+            }
+        });
+
+        // Carrega o Documento
+        pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+            pdfDoc = pdfDoc_;
+            document.getElementById('page_count').textContent = pdfDoc.numPages;
+
+            // Renderiza a página 1
+            renderPage(pageNum);
+        }).catch(function(error) {
+            console.error('Erro ao carregar PDF:', error);
+            alert('Erro ao carregar o livro. \n\nMotivo: O navegador bloqueou o acesso direto ao link externo (CORS) ou o arquivo não foi encontrado.\n\nSOLUÇÃO: Baixe o PDF, salve na pasta do projeto e use o Live Server.');
+        });
+    </script>
+</body>
+</html>
