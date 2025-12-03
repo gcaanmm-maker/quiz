@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitor de Livros</title>
+    <title>Leitor - Origem das Espécies</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -18,10 +18,9 @@
             display: flex;
             flex-direction: column;
             color: white;
-            overflow: hidden; /* Impede rolagem da página inteira */
+            overflow: hidden;
         }
 
-        /* Barra de Topo */
         .reader-nav {
             background-color: rgba(44, 62, 80, 0.9);
             padding: 10px 20px;
@@ -32,26 +31,23 @@
             z-index: 10;
         }
 
-        /* Área central do livro */
         .book-stage {
             flex-grow: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: auto; /* Permite rolar se o zoom for muito grande */
+            overflow: auto;
             padding: 20px;
             position: relative;
         }
 
-        /* A "Página" de papel */
         #the-canvas {
             border: 1px solid #000;
             box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
             background-color: white;
-            transition: opacity 0.3s; /* Efeito suave ao trocar página */
+            transition: opacity 0.3s;
         }
 
-        /* Controles flutuantes na parte inferior */
         .controls-bottom {
             background-color: rgba(0, 0, 0, 0.8);
             padding: 10px;
@@ -66,7 +62,6 @@
             font-size: 1.1rem;
         }
 
-        /* Botões redondos */
         .btn-circle {
             border-radius: 50%;
             width: 40px;
@@ -84,7 +79,7 @@
         <a href="biblioteca.html" class="btn btn-outline-light btn-sm">
             <i class="fas fa-arrow-left"></i> Voltar à Biblioteca
         </a>
-        <span class="d-none d-md-block">A Origem das Espécies - Visualização</span>
+        <span class="d-none d-md-block">A Origem das Espécies</span>
         <div>
             <button class="btn btn-secondary btn-sm me-1" id="zoom-out"><i class="fas fa-search-minus"></i></button>
             <button class="btn btn-secondary btn-sm" id="zoom-in"><i class="fas fa-search-plus"></i></button>
@@ -110,52 +105,39 @@
     </div>
 
     <script>
-        // URL do PDF (Tente usar um arquivo local se este link bloquear por CORS)
-        // OBS: Alguns links externos bloqueiam acesso via script. O ideal é baixar o PDF e colocar na pasta.
-        // Vou deixar configurado para procurar um arquivo local chamado 'darwin.pdf' para evitar erros,
-        // mas você pode tentar colar o link da internet aqui.
-        
-        const url = 'https://domainpublic.wordpress.com/wp-content/uploads/2022/01/darwin.pdf'; 
-        // DICA: Se der tela branca, baixe o PDF, salve como 'livro.pdf' na pasta e mude a linha acima para: const url = 'livro.pdf';
+        // --- CONFIGURAÇÃO DO ARQUIVO LOCAL ---
+        // Certifique-se de que o arquivo se chama EXATAMENTE "origen.pdf"
+        const url = 'origem.pdf'; 
 
-        // Configuração inicial do PDF.js
         let pdfDoc = null,
             pageNum = 1,
             pageRendering = false,
             pageNumPending = null,
-            scale = 1.2, // Tamanho inicial do Zoom
+            scale = 1.2,
             canvas = document.getElementById('the-canvas'),
             ctx = canvas.getContext('2d');
 
-        // Define o Worker (necessário para processar o PDF)
+        // Configura o Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /**
-         * Renderiza a página no canvas
-         */
         function renderPage(num) {
             pageRendering = true;
-            
-            // Efeito visual de "carregando" (transparência)
             canvas.style.opacity = '0.5';
 
-            // Pega a página
             pdfDoc.getPage(num).then(function(page) {
                 var viewport = page.getViewport({scale: scale});
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
-                // Renderiza
                 var renderContext = {
                     canvasContext: ctx,
                     viewport: viewport
                 };
                 var renderTask = page.render(renderContext);
 
-                // Espera terminar de desenhar
                 renderTask.promise.then(function() {
                     pageRendering = false;
-                    canvas.style.opacity = '1'; // Volta a opacidade normal
+                    canvas.style.opacity = '1';
                     if (pageNumPending !== null) {
                         renderPage(pageNumPending);
                         pageNumPending = null;
@@ -163,13 +145,9 @@
                 });
             });
 
-            // Atualiza os números no rodapé
             document.getElementById('page_num').textContent = num;
         }
 
-        /**
-         * Fila de renderização (se clicar muito rápido)
-         */
         function queueRenderPage(num) {
             if (pageRendering) {
                 pageNumPending = num;
@@ -178,41 +156,25 @@
             }
         }
 
-        /**
-         * Vai para página anterior
-         */
         function onPrevPage() {
-            if (pageNum <= 1) {
-                return;
-            }
+            if (pageNum <= 1) { return; }
             pageNum--;
             queueRenderPage(pageNum);
         }
         document.getElementById('prev').addEventListener('click', onPrevPage);
 
-        /**
-         * Vai para próxima página
-         */
         function onNextPage() {
-            if (pageNum >= pdfDoc.numPages) {
-                return;
-            }
+            if (pageNum >= pdfDoc.numPages) { return; }
             pageNum++;
             queueRenderPage(pageNum);
         }
         document.getElementById('next').addEventListener('click', onNextPage);
 
-        /**
-         * Zoom In
-         */
         document.getElementById('zoom-in').addEventListener('click', function() {
             scale += 0.2;
             renderPage(pageNum);
         });
 
-        /**
-         * Zoom Out
-         */
         document.getElementById('zoom-out').addEventListener('click', function() {
             if(scale > 0.6) {
                 scale -= 0.2;
@@ -220,16 +182,15 @@
             }
         });
 
-        // Carrega o Documento
+        // Carrega o PDF
         pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
             pdfDoc = pdfDoc_;
             document.getElementById('page_count').textContent = pdfDoc.numPages;
-
-            // Renderiza a página 1
             renderPage(pageNum);
         }).catch(function(error) {
             console.error('Erro ao carregar PDF:', error);
-            alert('Erro ao carregar o livro. \n\nMotivo: O navegador bloqueou o acesso direto ao link externo (CORS) ou o arquivo não foi encontrado.\n\nSOLUÇÃO: Baixe o PDF, salve na pasta do projeto e use o Live Server.');
+            // Mensagem amigável se der erro
+            alert('Não foi possível carregar o arquivo "origem.pdf".\n\nVerifique:\n1. Se o arquivo está na mesma pasta.\n2. Se o nome está exato.\n3. IMPORTANTE: Tente abrir este site usando o "Live Server" ou Python, pois navegadores bloqueiam arquivos locais diretos.');
         });
     </script>
 </body>
