@@ -14,31 +14,63 @@
         }
         .header-bar { background-color: rgba(85, 85, 85, 0.8); padding: 15px; text-align: center; }
         .search-bar { width: 100%; padding: 10px; border: none; background-color: white; color: black; margin-bottom: 2px;}
-        .list-group-item { background-color: transparent; border: none; border-bottom: 1px solid #555; color: white; display: flex; align-items: center; padding: 15px; }
+        
+        /* Estilo para os itens da lista clicáveis */
+        .list-group-item { 
+            background-color: transparent; 
+            border: none; 
+            border-bottom: 1px solid #555; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            padding: 15px; 
+            transition: background 0.3s;
+            text-decoration: none; /* Remove sublinhado do link */
+            cursor: pointer;
+        }
+        .list-group-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #3498db;
+        }
+        /* Ajuste no tamanho da imagem do livro */
         .book-img { width: 50px; height: 70px; margin-right: 20px; object-fit: cover; border: 1px solid #777;}
     </style>
 </head>
 <body>
-    <div class="header-bar position-relative">
-        <a href="cursos.html" class="btn btn-sm btn-light position-absolute start-0 ms-3 top-50 translate-middle-y"><i class="fas fa-arrow-left"></i> Voltar</a>
+
+    <nav class="navbar navbar-expand bg-dark border-bottom border-primary mb-0 p-3 shadow">
+        <div class="container-fluid">
+            <a href="cursos.html" class="navbar-brand text-white fw-bold">Portal do Aluno</a>
+            <div class="d-flex align-items-center">
+                <a href="cursos.html" class="btn btn-sm btn-light me-3"><i class="fas fa-arrow-left"></i> Voltar</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="header-bar">
         <h3>Biblioteca</h3>
     </div>
     
     <input type="text" class="search-bar" placeholder="Buscar">
 
     <div class="list-group list-group-flush">
-        <div class="list-group-item">
-            <img src="https://via.placeholder.com/50x70/000000/ffffff?text=Livro" class="book-img">
+        <a href="leitura.html" class="list-group-item">
+            <img src="5.png" alt="Capa Origem das Espécies" class="book-img">
             <span>Origem das Espécies</span>
-        </div>
-        <div class="list-group-item">
-             <img src="https://via.placeholder.com/50x70/000080/ffffff?text=Enf" class="book-img">
+            <i class="fas fa-book-open ms-auto"></i> </a>
+
+        <a href="#" class="list-group-item">
+             <img src="6.png" alt="Capa Enfermagem" class="book-img">
             <span>Fundamentos de Enfermagem</span>
-        </div>
-        <div class="list-group-item">
-             <img src="https://via.placeholder.com/50x70/3498db/ffffff?text=Code" class="book-img">
+            <i class="fas fa-lock ms-auto text-secondary"></i>
+        </a>
+
+        <a href="#" class="list-group-item">
+             <img src="7.png" alt="Capa Programação" class="book-img">
             <span>Linguagem de Programação</span>
-        </div>
+            <i class="fas fa-lock ms-auto text-secondary"></i>
+        </a>
     </div>
+
 </body>
 </html>
