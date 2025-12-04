@@ -30,58 +30,66 @@
             z-index: 100;
         }
 
-        /* Área do Livro */
+        /* PALCO DO LIVRO - Com Perspectiva 3D ativada */
         .book-stage {
             flex-grow: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* O Zoom vai expandir dentro daqui */
+            overflow: hidden;
             padding: 10px;
             position: relative;
+            perspective: 2000px; /* Isso cria a profundidade 3D */
         }
 
-        /* Container que segura as duas páginas */
+        /* O LIVRO (Container das duas páginas) */
         #book-spread {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 0; /* Sem espaço no meio, igual um livro */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            transform-origin: center center;
+            gap: 0; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            
+            /* Configuração da Animação */
+            transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.5s;
+            transform-style: preserve-3d; /* Mantém o 3D */
+            transform-origin: center center; /* Gira pelo meio (lombada) */
         }
 
-        /* Estilo comum das páginas */
+        /* Páginas Individuais */
         canvas {
             background-color: white;
-            height: 85vh; /* Altura responsiva */
-            width: auto;  /* Largura automática baseada na proporção */
+            height: 80vh; 
+            width: auto;
             display: block;
+            backface-visibility: hidden; /* Melhora performance */
         }
 
-        /* Borda esquerda da página direita (efeito de dobra) */
+        /* Sombras internas para simular a dobra do papel */
         #canvas-right {
             border-left: 1px solid #ddd;
-            background: linear-gradient(to right, #f0f0f0 0%, #ffffff 5%);
+            background: linear-gradient(to right, #e0e0e0 0%, #ffffff 10%);
         }
-        
-        /* Borda direita da página esquerda (efeito de dobra) */
         #canvas-left {
             border-right: 1px solid #ccc;
-            background: linear-gradient(to left, #f0f0f0 0%, #ffffff 5%);
+            background: linear-gradient(to left, #e0e0e0 0%, #ffffff 10%);
         }
 
-        /* Animação de virar */
+        /* --- ANIMAÇÕES DE VIRADA --- */
+        
+        /* Virar para a PRÓXIMA (Gira para a esquerda) */
         .page-turning-next {
-            opacity: 0.5;
-            transform: translateX(-50px) scale(0.95);
-        }
-        .page-turning-prev {
-            opacity: 0.5;
-            transform: translateX(50px) scale(0.95);
+            transform: rotateY(-25deg) scale(0.9); /* Inclina e diminui um pouco */
+            opacity: 0.6;
         }
 
+        /* Virar para a ANTERIOR (Gira para a direita) */
+        .page-turning-prev {
+            transform: rotateY(25deg) scale(0.9);
+            opacity: 0.6;
+        }
+
+        /* Controles */
         .controls-bottom {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 15px;
@@ -121,7 +129,6 @@
             <button class="btn btn-warning btn-sm me-3 fw-bold" onclick="toggleFullScreen()">
                 <i class="fas fa-expand"></i> Tela Cheia
             </button>
-
             <button class="btn btn-secondary btn-sm me-1" id="zoom-out"><i class="fas fa-search-minus"></i></button>
             <button class="btn btn-secondary btn-sm" id="zoom-in"><i class="fas fa-search-plus"></i></button>
         </div>
@@ -149,10 +156,11 @@
     </div>
 
     <script>
-        const url = 'origem.pdf'; // Seu arquivo
+        // CONFIGURAÇÃO
+        const url = 'origem.pdf'; // Nome exato do arquivo
 
         let pdfDoc = null,
-            pageNum = 1, // Página da esquerda
+            pageNum = 1,
             pageRendering = false,
             pageNumPending = null,
             scale = 1.0, 
@@ -164,7 +172,7 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // --- TELA CHEIA ---
+        // Tela Cheia
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
@@ -175,39 +183,39 @@
             }
         }
 
-        // --- RENDERIZAÇÃO DUPLA ---
+        // Renderiza as duas páginas
         function renderSpread(num) {
             pageRendering = true;
             
-            // Renderiza Esquerda
+            // Página Esquerda
             const p1 = pdfDoc.getPage(num).then(function(page) {
                 var viewport = page.getViewport({scale: scale});
                 canvasLeft.height = viewport.height;
                 canvasLeft.width = viewport.width;
-
                 var renderContext = { canvasContext: ctxLeft, viewport: viewport };
                 return page.render(renderContext).promise;
             });
 
-            // Renderiza Direita (Se existir)
+            // Página Direita (se existir)
             let p2 = Promise.resolve();
             if (num + 1 <= pdfDoc.numPages) {
-                canvasRight.style.display = 'block'; // Mostra canvas direito
+                canvasRight.style.display = 'block';
                 p2 = pdfDoc.getPage(num + 1).then(function(page) {
                     var viewport = page.getViewport({scale: scale});
                     canvasRight.height = viewport.height;
                     canvasRight.width = viewport.width;
-
                     var renderContext = { canvasContext: ctxRight, viewport: viewport };
                     return page.render(renderContext).promise;
                 });
             } else {
-                canvasRight.style.display = 'none'; // Esconde se for a última página ímpar
+                canvasRight.style.display = 'none'; // Esconde se for última página
             }
 
-            // Quando as duas terminarem
+            // Quando terminar de desenhar as duas
             Promise.all([p1, p2]).then(() => {
                 pageRendering = false;
+                
+                // REMOVE AS CLASSES DE ANIMAÇÃO
                 bookSpread.classList.remove('page-turning-next');
                 bookSpread.classList.remove('page-turning-prev');
 
@@ -217,7 +225,7 @@
                 }
             });
 
-            // Atualiza Texto
+            // Atualiza numeração
             let textPag = num;
             if (num + 1 <= pdfDoc.numPages) textPag += " - " + (num + 1);
             document.getElementById('page_num').textContent = textPag;
@@ -231,30 +239,39 @@
             }
         }
 
-        // --- NAVEGAÇÃO ---
+        // --- NAVEGAÇÃO COM ANIMAÇÃO ---
+        
         function onPrevPage() {
             if (pageNum <= 1) return;
+            
+            // 1. Adiciona classe de animação (Gira para direita)
             bookSpread.classList.add('page-turning-prev');
+            
+            // 2. Espera 500ms (tempo exato da transição CSS)
             setTimeout(() => {
-                pageNum -= 2; // Volta 2 páginas
+                pageNum -= 2;
                 if (pageNum < 1) pageNum = 1;
                 queueRenderSpread(pageNum);
-            }, 200);
+            }, 500);
         }
 
         function onNextPage() {
             if (pageNum >= pdfDoc.numPages) return;
+            
+            // 1. Adiciona classe de animação (Gira para esquerda)
             bookSpread.classList.add('page-turning-next');
+            
+            // 2. Espera 500ms (tempo exato da transição CSS)
             setTimeout(() => {
-                pageNum += 2; // Avança 2 páginas
+                pageNum += 2;
                 queueRenderSpread(pageNum);
-            }, 200);
+            }, 500);
         }
 
         document.getElementById('prev').addEventListener('click', onPrevPage);
         document.getElementById('next').addEventListener('click', onNextPage);
 
-        // Zoom (Ajusta Scale)
+        // Zoom
         document.getElementById('zoom-in').addEventListener('click', function() {
             scale += 0.2;
             renderSpread(pageNum);
@@ -272,13 +289,13 @@
             if (event.key === "ArrowRight") onNextPage();
         });
 
-        // Init
+        // Início
         pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
             pdfDoc = pdfDoc_;
             document.getElementById('page_count').textContent = pdfDoc.numPages;
             renderSpread(pageNum);
         }).catch(function(error) {
-            alert('Erro ao carregar "origem.pdf". Verifique o nome do arquivo.');
+            alert('Erro ao carregar "origem.pdf".');
         });
     </script>
 </body>
