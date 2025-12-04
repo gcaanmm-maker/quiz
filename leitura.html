@@ -11,6 +11,7 @@
 
     <style>
         body {
+            /* Fundo com gradiente escuro */
             background: radial-gradient(circle at center, #5e5e5e 0%, #1a1a1a 100%);
             margin: 0;
             padding: 0;
@@ -18,9 +19,10 @@
             display: flex;
             flex-direction: column;
             color: white;
-            overflow: hidden; /* Impede rolagem global */
+            overflow: hidden; /* Impede rolagem da página inteira */
         }
 
+        /* Barra de Navegação Superior */
         .reader-nav {
             background-color: rgba(44, 62, 80, 0.95);
             padding: 10px 20px;
@@ -31,7 +33,7 @@
             z-index: 100;
         }
 
-        /* Área do Livro - Com Perspectiva 3D */
+        /* Área central do Livro com Perspectiva 3D */
         .book-stage {
             flex-grow: 1;
             display: flex;
@@ -40,22 +42,22 @@
             overflow: hidden;
             padding: 20px;
             position: relative;
-            perspective: 1500px; /* Dá profundidade 3D */
+            perspective: 1500px; /* Cria profundidade 3D para o giro */
         }
 
-        /* O Canvas (Página) */
+        /* A Página (Canvas) */
         #the-canvas {
             border: 1px solid #ccc;
             box-shadow: 5px 5px 25px rgba(0,0,0,0.6);
             background-color: white;
-            /* Configuração da Animação */
+            /* Configuração da Animação de Giro */
             transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
-            transform-origin: center left; /* A página gira a partir da esquerda (lombada) */
+            transform-origin: center left; /* Gira a partir da "lombada" esquerda */
             opacity: 1;
             transform: rotateY(0deg);
         }
 
-        /* Classes de Animação (JavaScript ativa isso) */
+        /* Classes que ativam a animação (adicionadas via JS) */
         .page-turning-next {
             opacity: 0.2;
             transform: rotateY(-45deg) translateX(-100px) !important;
@@ -66,6 +68,7 @@
             transform: rotateY(45deg) translateX(100px) !important;
         }
 
+        /* Barra de Controles Inferior */
         .controls-bottom {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 15px;
@@ -111,7 +114,7 @@
     </div>
 
     <div class="controls-bottom">
-        <button class="btn btn-primary btn-circle" id="prev" title="Página Anterior (Seta Esquerda)">
+        <button class="btn btn-primary btn-circle" id="prev" title="Página Anterior">
             <i class="fas fa-chevron-left"></i>
         </button>
         
@@ -119,24 +122,25 @@
             <span id="page_num">1</span> / <span id="page_count">--</span>
         </span>
         
-        <button class="btn btn-primary btn-circle" id="next" title="Próxima Página (Seta Direita)">
+        <button class="btn btn-primary btn-circle" id="next" title="Próxima Página">
             <i class="fas fa-chevron-right"></i>
         </button>
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO ---
-        const url = 'origen.pdf'; // Certifique-se que o nome do arquivo é este
+        // --- CONFIGURAÇÃO DO ARQUIVO ---
+        // Aqui está o nome corrigido para "origem.pdf"
+        const url = 'origem.pdf'; 
 
         let pdfDoc = null,
             pageNum = 1,
             pageRendering = false,
             pageNumPending = null,
-            scale = 1.0, // Zoom inicial
+            scale = 1.0, // Zoom inicial (1.0 = 100%)
             canvas = document.getElementById('the-canvas'),
             ctx = canvas.getContext('2d');
 
-        // Worker do PDF.js
+        // Define o Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         /**
@@ -145,11 +149,11 @@
         function renderPage(num) {
             pageRendering = true;
             
-            // Pega a página do documento PDF
+            // Pega a página do arquivo PDF
             pdfDoc.getPage(num).then(function(page) {
                 var viewport = page.getViewport({scale: scale});
                 
-                // Ajusta o tamanho do canvas para o tamanho da página PDF
+                // Ajusta o tamanho do canvas para caber a página
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
@@ -160,11 +164,11 @@
                 
                 var renderTask = page.render(renderContext);
 
-                // Quando terminar de desenhar:
+                // Quando terminar de desenhar a página:
                 renderTask.promise.then(function() {
                     pageRendering = false;
                     
-                    // REMOVE as classes de animação para a página aparecer
+                    // Remove as classes de animação para mostrar a página nova
                     canvas.classList.remove('page-turning-next');
                     canvas.classList.remove('page-turning-prev');
 
@@ -175,10 +179,13 @@
                 });
             });
 
-            // Atualiza contador
+            // Atualiza o número da página no rodapé
             document.getElementById('page_num').textContent = num;
         }
 
+        /**
+         * Fila de renderização (evita travar se clicar muito rápido)
+         */
         function queueRenderPage(num) {
             if (pageRendering) {
                 pageNumPending = num;
@@ -187,15 +194,15 @@
             }
         }
 
-        // --- NAVEGAÇÃO COM ANIMAÇÃO ---
+        // --- NAVEGAÇÃO COM EFEITO DE ANIMAÇÃO ---
 
         function onPrevPage() {
             if (pageNum <= 1) return;
             
-            // 1. Adiciona efeito visual (gira para direita)
+            // 1. Aplica animação (Gira para direita)
             canvas.classList.add('page-turning-prev');
             
-            // 2. Espera 300ms (tempo da animação) antes de carregar a nova página
+            // 2. Espera 300ms antes de carregar a página anterior
             setTimeout(() => {
                 pageNum--;
                 queueRenderPage(pageNum);
@@ -205,17 +212,17 @@
         function onNextPage() {
             if (pageNum >= pdfDoc.numPages) return;
             
-            // 1. Adiciona efeito visual (gira para esquerda)
+            // 1. Aplica animação (Gira para esquerda)
             canvas.classList.add('page-turning-next');
             
-            // 2. Espera 300ms antes de carregar
+            // 2. Espera 300ms antes de carregar a próxima página
             setTimeout(() => {
                 pageNum++;
                 queueRenderPage(pageNum);
             }, 300);
         }
 
-        // Eventos dos botões
+        // Eventos de clique nos botões
         document.getElementById('prev').addEventListener('click', onPrevPage);
         document.getElementById('next').addEventListener('click', onNextPage);
 
@@ -231,7 +238,7 @@
             }
         });
 
-        // Eventos de Teclado (Setas)
+        // Controle por Teclado (Setas Esquerda/Direita)
         document.addEventListener('keydown', function(event) {
             if (event.key === "ArrowLeft") {
                 onPrevPage();
@@ -240,14 +247,28 @@
             }
         });
 
-        // Carregamento Inicial
+        // --- CARREGAMENTO INICIAL DO PDF ---
         pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
             pdfDoc = pdfDoc_;
             document.getElementById('page_count').textContent = pdfDoc.numPages;
+            
+            // Renderiza a primeira página
             renderPage(pageNum);
         }).catch(function(error) {
-            console.error('Erro:', error);
-            alert('Erro ao abrir o PDF. Certifique-se de que o arquivo "origen.pdf" está na pasta e que você está usando o Live Server.');
+            console.error('Erro detalhado:', error);
+            
+            let mensagem = 'Erro desconhecido.';
+            
+            // Diagnóstico de erro
+            if (error.name === 'MissingPDFException') {
+                mensagem = 'ARQUIVO NÃO ENCONTRADO!\n\nO sistema procurou por: "' + url + '"\nMas não encontrou na pasta.\n\nVerifique se o nome do arquivo PDF é exatamente "origem.pdf".';
+            } else if (error.name === 'InvalidPDFException') {
+                mensagem = 'ARQUIVO INVÁLIDO.\n\nO arquivo existe, mas parece estar corrompido ou vazio.';
+            } else {
+                mensagem = 'ERRO TÉCNICO: ' + error.message + '\n\nDICA: Certifique-se de estar usando o Live Server, navegadores bloqueiam arquivos locais.';
+            }
+
+            alert(mensagem);
         });
     </script>
 </body>
