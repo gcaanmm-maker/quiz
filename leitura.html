@@ -18,68 +18,88 @@
             display: flex;
             flex-direction: column;
             color: white;
-            overflow: hidden;
+            overflow: hidden; /* Impede rolagem global */
         }
 
         .reader-nav {
-            background-color: rgba(44, 62, 80, 0.9);
+            background-color: rgba(44, 62, 80, 0.95);
             padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 100;
         }
 
+        /* Área do Livro - Com Perspectiva 3D */
         .book-stage {
             flex-grow: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: auto;
+            overflow: hidden;
             padding: 20px;
             position: relative;
+            perspective: 1500px; /* Dá profundidade 3D */
         }
 
+        /* O Canvas (Página) */
         #the-canvas {
-            border: 1px solid #000;
-            box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #ccc;
+            box-shadow: 5px 5px 25px rgba(0,0,0,0.6);
             background-color: white;
-            transition: opacity 0.3s;
+            /* Configuração da Animação */
+            transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+            transform-origin: center left; /* A página gira a partir da esquerda (lombada) */
+            opacity: 1;
+            transform: rotateY(0deg);
+        }
+
+        /* Classes de Animação (JavaScript ativa isso) */
+        .page-turning-next {
+            opacity: 0.2;
+            transform: rotateY(-45deg) translateX(-100px) !important;
+        }
+
+        .page-turning-prev {
+            opacity: 0.2;
+            transform: rotateY(45deg) translateX(100px) !important;
         }
 
         .controls-bottom {
-            background-color: rgba(0, 0, 0, 0.8);
-            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 15px;
             text-align: center;
             border-top: 1px solid #555;
+            z-index: 100;
         }
 
         .page-info {
-            margin: 0 15px;
+            margin: 0 20px;
             font-weight: bold;
             font-family: monospace;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
+            color: #3498db;
         }
 
         .btn-circle {
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            line-height: 40px;
-            text-align: center;
-            margin: 0 5px;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            margin: 0 10px;
+            transition: transform 0.2s;
         }
+        .btn-circle:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
 
     <div class="reader-nav">
         <a href="biblioteca.html" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-arrow-left"></i> Voltar à Biblioteca
+            <i class="fas fa-arrow-left"></i> Voltar
         </a>
-        <span class="d-none d-md-block">A Origem das Espécies</span>
+        <span class="d-none d-md-block fw-bold">A Origem das Espécies</span>
         <div>
             <button class="btn btn-secondary btn-sm me-1" id="zoom-out"><i class="fas fa-search-minus"></i></button>
             <button class="btn btn-secondary btn-sm" id="zoom-in"><i class="fas fa-search-plus"></i></button>
@@ -91,41 +111,45 @@
     </div>
 
     <div class="controls-bottom">
-        <button class="btn btn-primary btn-circle" id="prev">
+        <button class="btn btn-primary btn-circle" id="prev" title="Página Anterior (Seta Esquerda)">
             <i class="fas fa-chevron-left"></i>
         </button>
         
         <span class="page-info">
-            Pág: <span id="page_num">--</span> / <span id="page_count">--</span>
+            <span id="page_num">1</span> / <span id="page_count">--</span>
         </span>
         
-        <button class="btn btn-primary btn-circle" id="next">
+        <button class="btn btn-primary btn-circle" id="next" title="Próxima Página (Seta Direita)">
             <i class="fas fa-chevron-right"></i>
         </button>
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO DO ARQUIVO LOCAL ---
-        // Certifique-se de que o arquivo se chama EXATAMENTE "origen.pdf"
-        const url = 'origem.pdf'; 
+        // --- CONFIGURAÇÃO ---
+        const url = 'origen.pdf'; // Certifique-se que o nome do arquivo é este
 
         let pdfDoc = null,
             pageNum = 1,
             pageRendering = false,
             pageNumPending = null,
-            scale = 1.2,
+            scale = 1.0, // Zoom inicial
             canvas = document.getElementById('the-canvas'),
             ctx = canvas.getContext('2d');
 
-        // Configura o Worker do PDF.js
+        // Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+        /**
+         * Renderiza a página no canvas
+         */
         function renderPage(num) {
             pageRendering = true;
-            canvas.style.opacity = '0.5';
-
+            
+            // Pega a página do documento PDF
             pdfDoc.getPage(num).then(function(page) {
                 var viewport = page.getViewport({scale: scale});
+                
+                // Ajusta o tamanho do canvas para o tamanho da página PDF
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
@@ -133,11 +157,17 @@
                     canvasContext: ctx,
                     viewport: viewport
                 };
+                
                 var renderTask = page.render(renderContext);
 
+                // Quando terminar de desenhar:
                 renderTask.promise.then(function() {
                     pageRendering = false;
-                    canvas.style.opacity = '1';
+                    
+                    // REMOVE as classes de animação para a página aparecer
+                    canvas.classList.remove('page-turning-next');
+                    canvas.classList.remove('page-turning-prev');
+
                     if (pageNumPending !== null) {
                         renderPage(pageNumPending);
                         pageNumPending = null;
@@ -145,6 +175,7 @@
                 });
             });
 
+            // Atualiza contador
             document.getElementById('page_num').textContent = num;
         }
 
@@ -156,41 +187,67 @@
             }
         }
 
+        // --- NAVEGAÇÃO COM ANIMAÇÃO ---
+
         function onPrevPage() {
-            if (pageNum <= 1) { return; }
-            pageNum--;
-            queueRenderPage(pageNum);
+            if (pageNum <= 1) return;
+            
+            // 1. Adiciona efeito visual (gira para direita)
+            canvas.classList.add('page-turning-prev');
+            
+            // 2. Espera 300ms (tempo da animação) antes de carregar a nova página
+            setTimeout(() => {
+                pageNum--;
+                queueRenderPage(pageNum);
+            }, 300);
         }
-        document.getElementById('prev').addEventListener('click', onPrevPage);
 
         function onNextPage() {
-            if (pageNum >= pdfDoc.numPages) { return; }
-            pageNum++;
-            queueRenderPage(pageNum);
+            if (pageNum >= pdfDoc.numPages) return;
+            
+            // 1. Adiciona efeito visual (gira para esquerda)
+            canvas.classList.add('page-turning-next');
+            
+            // 2. Espera 300ms antes de carregar
+            setTimeout(() => {
+                pageNum++;
+                queueRenderPage(pageNum);
+            }, 300);
         }
+
+        // Eventos dos botões
+        document.getElementById('prev').addEventListener('click', onPrevPage);
         document.getElementById('next').addEventListener('click', onNextPage);
 
+        // Eventos de Zoom
         document.getElementById('zoom-in').addEventListener('click', function() {
             scale += 0.2;
             renderPage(pageNum);
         });
-
         document.getElementById('zoom-out').addEventListener('click', function() {
-            if(scale > 0.6) {
+            if(scale > 0.4) {
                 scale -= 0.2;
                 renderPage(pageNum);
             }
         });
 
-        // Carrega o PDF
+        // Eventos de Teclado (Setas)
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowLeft") {
+                onPrevPage();
+            } else if (event.key === "ArrowRight") {
+                onNextPage();
+            }
+        });
+
+        // Carregamento Inicial
         pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
             pdfDoc = pdfDoc_;
             document.getElementById('page_count').textContent = pdfDoc.numPages;
             renderPage(pageNum);
         }).catch(function(error) {
-            console.error('Erro ao carregar PDF:', error);
-            // Mensagem amigável se der erro
-            alert('Não foi possível carregar o arquivo "origem.pdf".\n\nVerifique:\n1. Se o arquivo está na mesma pasta.\n2. Se o nome está exato.\n3. IMPORTANTE: Tente abrir este site usando o "Live Server" ou Python, pois navegadores bloqueiam arquivos locais diretos.');
+            console.error('Erro:', error);
+            alert('Erro ao abrir o PDF. Certifique-se de que o arquivo "origen.pdf" está na pasta e que você está usando o Live Server.');
         });
     </script>
 </body>
